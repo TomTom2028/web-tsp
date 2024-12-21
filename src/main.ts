@@ -11,6 +11,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
     <div class="card">
       <button id="counter" type="button">Load</button>
+      Amount of cities: <input id="amountOfCities" value="75">
     </div>
     <div class="main-body">
     <div class="side">
@@ -36,6 +37,8 @@ const citiesText = document.querySelector<HTMLTextAreaElement>('#cities')!;
 const currentTempText = document.querySelector<HTMLHeadingElement>('#currentTemp')!;
 const currentCostText = document.querySelector<HTMLHeadingElement>('#currentCost')!;
 const iterationsText = document.querySelector<HTMLHeadingElement>('#iterations')!;
+const amountOfCitiesInput = document.querySelector<HTMLInputElement>('#amountOfCities')!;
+
 
 clearBtn.addEventListener('click', () => {
     citiesText.value = '';
@@ -43,12 +46,17 @@ clearBtn.addEventListener('click', () => {
 
 
 button.addEventListener('click', async () => {
+    let amountOfCities = parseInt(amountOfCitiesInput.value);
+    if (isNaN(amountOfCities)) {
+        amountOfCities = 75;
+    }
+
     const random = new Random();
     let cities: City[]
     if (citiesText.value) {
         cities = JSON.parse(citiesText.value);
     } else {
-        cities = GenerateRandomCities(75, random);
+        cities = GenerateRandomCities(amountOfCities, random);
         citiesText.value = JSON.stringify(cities);
     }
 
