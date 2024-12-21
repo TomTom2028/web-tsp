@@ -2,14 +2,15 @@ import './style.css'
 import TspWorker from "./tsp-worker/TspWorker.ts";
 import GenerateRandomCities from "./tsp-worker/supporting/CityGenerator.ts";
 import {DistanceMatrix} from "./tsp-worker/supporting/DistanceMatrix.ts";
-import {drawSolution, generateInitialSolution} from "./tsp-worker/supporting/Helpers.ts";
+import {drawSolution, generateInitialSolution, throttle} from "./tsp-worker/supporting/Helpers.ts";
 import Random from "./tsp-worker/supporting/Random.ts";
-import {City} from "./tsp-worker/supporting/types/TspTypes.ts";
+import {City, TspUpdateInfo} from "./tsp-worker/supporting/types/TspTypes.ts";
 import Solver from "./tsp-worker/tsp-internal/Solver.ts";
 
 document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
   <div>
     <div class="card">
+      Amount of threads: <input id="amountOfThreads" value="1">
       <button id="counter" type="button">Load</button>
       Amount of cities: <input id="amountOfCities" value="75">
     </div>
@@ -38,6 +39,7 @@ const currentTempText = document.querySelector<HTMLHeadingElement>('#currentTemp
 const currentCostText = document.querySelector<HTMLHeadingElement>('#currentCost')!;
 const iterationsText = document.querySelector<HTMLHeadingElement>('#iterations')!;
 const amountOfCitiesInput = document.querySelector<HTMLInputElement>('#amountOfCities')!;
+const amountOfThreadsInput = document.querySelector<HTMLInputElement>('#amountOfThreads')!;
 
 
 clearBtn.addEventListener('click', () => {
@@ -51,6 +53,11 @@ button.addEventListener('click', async () => {
         amountOfCities = 75;
     }
 
+    let amountOfThreads = parseInt(amountOfThreadsInput.value);
+    if (isNaN(amountOfThreads)) {
+        amountOfThreads = 1;
+    }
+
     const random = new Random();
     let cities: City[]
     if (citiesText.value) {
@@ -61,28 +68,55 @@ button.addEventListener('click', async () => {
     }
 
 
-
     const distanceMatrix = DistanceMatrix.fromCities(cities);
     console.log(distanceMatrix);
 
     const initialSolution = generateInitialSolution(cities.length);
+    const initialCost = Solver.calculateCost(initialSolution, distanceMatrix);
     console.log(initialSolution);
 
-    const tspWorker = new TspWorker(500000);
+
+    let bestUpdate: TspUpdateInfo = {
+        bestCost: initialCost,
+        bestSolution: initialSolution,
+        currentIteration: -1,
+        temperature: -1,
+        currentCost: initialCost,
+        currentSolution: initialSolution
+    };
+
+    const throttledUpdate = throttle(() => {
+        drawSolution(canvas, cities, bestUpdate.bestSolution);
+        currentTempText.innerText = `Current temp: ${bestUpdate.temperature}`;
+        currentCostText.innerText = `Current cost: ${bestUpdate.bestCost}`;
+        iterationsText.innerText = `Iterations: ${bestUpdate.currentIteration}`;
+    }, 500)
+
+
 
     button.disabled = true;
 
-    tspWorker.addTspUpdateCallback((updateInfo) => {
-        console.log("updateInfo: ", updateInfo);
-        const currentBest = updateInfo.bestSolution;
-        drawSolution(canvas, cities, currentBest);
-        currentTempText.innerText = `Current temp: ${updateInfo.temperature}`;
-        currentCostText.innerText = `Current cost: ${updateInfo.bestCost}`;
-        iterationsText.innerText = `Iterations: ${updateInfo.currentIteration}`;
+    let workerPromises = [];
+    for (let i = 0; i < amountOfThreads; i++) {
+        const tspWorker = new TspWorker(500000);
+        tspWorker.addTspUpdateCallback((updateInfo) => {
+            if (updateInfo.bestCost <= bestUpdate.bestCost) {
+                bestUpdate = updateInfo;
+                throttledUpdate();
+            }
+        })
+        workerPromises.push(tspWorker.doTsp(distanceMatrix, initialSolution));
+    }
+
+    const solution = await Promise.all(workerPromises).then((solutions) => {
+        return solutions.reduce((bestSolution, currentSolution) => {
+            const originalCost = Solver.calculateCost(bestSolution, distanceMatrix);
+            const currentCost = Solver.calculateCost(currentSolution, distanceMatrix);
+            return currentCost < originalCost ? currentSolution : bestSolution;
+        }, initialSolution);
     })
 
 
-    const solution = await tspWorker.doTsp(distanceMatrix, initialSolution);
     console.log(distanceMatrix)
     currentCostText.innerText = `Current cost: ${Solver.calculateCost(solution, distanceMatrix)}`;
 

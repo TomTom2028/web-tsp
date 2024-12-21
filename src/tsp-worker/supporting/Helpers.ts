@@ -39,3 +39,16 @@ export function drawSolution(canvas: HTMLCanvasElement, cities: City[], solution
     ctx.closePath();
     ctx.stroke();
 }
+
+
+export function throttle(callback: Function, delay: number) {
+    let lastCall = 0;
+    return function() {
+        const now = Date.now();
+        if (now - lastCall < delay) {
+            return;
+        }
+        lastCall = now;
+        callback();
+    }
+}

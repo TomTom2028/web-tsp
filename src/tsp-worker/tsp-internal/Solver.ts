@@ -31,7 +31,6 @@ export default class Solver {
 
         const delta = (1 - 0.00002 / (initialSolution.length - 1));
         const temp = 12 * (initialSolution.length - 1);
-        console.log("initital temp: ", temp);
         this.annealing = new SimulatedAnnealing(temp, delta, random);
         this.moveGenerator = new MultiMoveGenerator(random, distanceMatrix);
         this.iterationsBeforeLog = iterationsBeforeLog;
@@ -89,6 +88,18 @@ export default class Solver {
                 timesRefused = 0;
             }
         }
+        // final update to sync solutions
+        const toReturnObj: TspUpdateInfo = {
+            currentIteration: index,
+            temperature: this.annealing.getTemperature(),
+            currentSolution: this.currentSolution,
+            currentCost: this.currentCost,
+
+            bestSolution: this.bestSolution,
+            bestCost: this.bestCost
+        }
+
+        this.solverCallbacks.forEach(callback => callback(toReturnObj));
 
         return this.bestSolution;
     }
