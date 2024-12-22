@@ -42,6 +42,7 @@ const amountOfCitiesInput = document.querySelector<HTMLInputElement>('#amountOfC
 const amountOfThreadsInput = document.querySelector<HTMLInputElement>('#amountOfThreads')!;
 
 
+
 clearBtn.addEventListener('click', () => {
     citiesText.value = '';
 })

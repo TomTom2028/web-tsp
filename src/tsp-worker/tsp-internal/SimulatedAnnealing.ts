@@ -14,8 +14,13 @@ export default class SimulatedAnnealing {
 
     public acceptDelta(delta: number): boolean {
         const chance = Math.exp(-delta / this.temperature);
-        this.temperature *= this.coolingRate;
-        return this.random.next() < chance;
+        const accept = this.random.next() < chance;
+        if (accept) {
+            this.temperature *= this.coolingRate;
+        } else if (this.random.next() < 0.2) {
+            this.temperature *= this.coolingRate;
+        }
+        return accept;
     }
 
     public getTemperature(): number {

@@ -29,7 +29,7 @@ export default class Solver {
         this.bestCost = this.currentCost;
 
 
-        const delta = (1 - 0.00002 / (initialSolution.length - 1));
+        const delta = (1 - 0.0005 / (initialSolution.length - 1));
         const temp = 12 * (initialSolution.length - 1);
         this.annealing = new SimulatedAnnealing(temp, delta, random);
         this.moveGenerator = new MultiMoveGenerator(random, distanceMatrix);
@@ -54,7 +54,8 @@ export default class Solver {
     public solve() {
         let timesRefused = 0;
         let index = 0;
-        while (timesRefused < 100000 || this.annealing.getTemperature() > 0.5) {
+        let realDeltaZeroCounter = 0;
+        while ((timesRefused < 100000 || this.annealing.getTemperature() > 0.5) && realDeltaZeroCounter < 100000) {
             const move = this.moveGenerator.generateMove(this.currentSolution);
             index++;
 
@@ -78,7 +79,14 @@ export default class Solver {
             }
 
             move.apply();
-            this.currentCost += move.getDelta();
+            const realDelta = Math.round(move.getDelta() * 10000) / 10000.0;
+            this.currentCost += realDelta;
+
+            if (realDelta == 0) {
+                realDeltaZeroCounter++;
+            } else {
+                realDeltaZeroCounter = 0;
+            }
 
             timesRefused /= 1.005;
 

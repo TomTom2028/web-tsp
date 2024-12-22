@@ -67,7 +67,7 @@ export default class SwapMoveGenerator implements MoveGenerator {
     }
 
     private getRandomIndexFromPath(path: TspSolution): number {
-        return this.random.nextInt(0, path.length - 1);
+        return this.random.nextInt(0, path.length - 2) + 1;
     }
 
     private getRandomIndexFromPathExcluding(path: TspSolution, excluding: number): number {
